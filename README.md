@@ -17,5 +17,3 @@
 ![Demo](videos/scenario%204%20gif.gif)
 
 ### Scenario 5 (Tracking trajectories):
-
-![Demo](videos/scenario%205%20gif.gif)
