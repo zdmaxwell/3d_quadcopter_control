@@ -10,8 +10,8 @@ For the initial scenario, I updated the mass in `QuadControlParams.txt` so that 
 
 ![Demo](videos/scenario%202%20gif.gif)
 
-For the `GenerateMotorCommands()`, I calculated the thrust components in the x, y, and z direction since I was provided the commanded collective thrust and the moments about the x, y, and z axis;
-Using the relationship between Moments and Force, I was able to determine the forces that corresponded to the moments in the x, y, and z direction. The x and y moments factored in the arm length
+For the `GenerateMotorCommands()`, I calculated the thrust components in the x, y, and z direction using the provided commanded collective thrust and the moments about the x, y, and z axis;
+Using the relationship between Moments and Force ( Force = Moment / L_arm ), I determined the forces that corresponded to the moments in the x, y, and z direction. The x and y moments factored in the arm length
 of the quadrotor, where the arm length was equal to l, since the x and y coordinate frame tied to the quadrotor is rotated at 45 degrees with respect to the quadrotor's arms.
 
 ```
