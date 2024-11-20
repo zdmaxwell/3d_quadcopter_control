@@ -1,5 +1,6 @@
 ## Project: Control of a 3D Quadrotor
 
+Quadrotor Coordinate System
 ![Coordinate system top view](diagrams/drone_coordinate_system1.png)
 ![Coordinate system side view](diagrams/drone_coordinate_system2.png)
 
@@ -28,14 +29,25 @@ float Fz = momentCmd.z / kappa;
 
 To apply the proper thrusts to each of the four propellers, I assigned a combination of the commanded collective thrust and the force component in each direction (x, y, z). I assigned the signs of the thrust components
 by determining how each thrust component contributes to the roll, pitch, and yaw moments based on the coordinate system. For example, to induce a positive roll moment (x direction), the thrust component for the front left
-and rear left propellers need to be positive. Similarly, for the z direction thrust, the front right and rear left propellers spin out of the screen, so they induce a positive reactive moment in the z direction, hence the
-positive z direction thrust component. 
+and rear left propellers need to be positive to cause the quad to rotate about the x axis. Similarly, for the z direction thrust, the front right and rear left propellers spin out of the screen, so they induce a positive
+reactive moment in the z direction, hence the positive z direction thrust component.
 
 ```
 cmd.desiredThrustsN[0] = (collThrustCmd + Fx + Fy - Fz) / 4.f; // front left
 cmd.desiredThrustsN[1] = (collThrustCmd - Fx + Fy + Fz) / 4.f; // front right
 cmd.desiredThrustsN[2] = (collThrustCmd + Fx - Fy + Fz) / 4.f; // rear left
 cmd.desiredThrustsN[3] = (collThrustCmd - Fx - Fy - Fz) / 4.f; // rear right
+```
+
+To develop the `BodyRateControl()` controller method, I used a P controller since this controller is a 1st order system as it takes in rotation rates in the body frame (p, q, r) which are the first
+derivative of the rotational position, and outputs commanded moments that are directly proportional to the body rotation rates. By determining the `bodyRateError` `V3F` object using the provided `pqrCmd` and `pqr` values,
+packaging the moments of inertia into a `V3F` data type, and factoring in the `kpPQR` gain, I calculated the commanded moment as a `V3F`:
+
+```
+V3F momentCmd;
+V3F momentOfInertia(Ixx, Iyy, Izz);
+V3F bodyRateError = pqrCmd - pqr;
+momentCmd = momentOfInertia * kpPQR * bodyRateError;
 ```
 
 ### Scenario 3 (Position/velocity and yaw angle control):
