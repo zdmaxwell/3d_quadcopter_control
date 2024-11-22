@@ -51,23 +51,23 @@ V3F bodyRateError = pqrCmd - pqr;
 momentCmd = momentOfInertia * kpPQR * bodyRateError;
 ```
 
-Lastly, to develop the `RollPitchControl()` controller, I implemented another P controller as it was also a 1st order system to control the commanded rates of changes of the roll and pitch angles in the body frame.
-To obtain the actual body frame roll and pitch angles, I referenced the provided rotation matrix, `R` which maps the body frame orientations to the inertial frame. Since the third column of the rotation matrix represents the
-mapping of the body frame orientations to the intertial frame's z axis, the actual body frame orientation is equal to R13 and R23.
+Lastly, to develop the `RollPitchControl()` controller, I implemented another P controller as it was also a 1st order system to control the commanded angular velocities `p` and `q` in the body frame.
+To obtain the actual body frame roll and pitch angles, I referenced the provided rotation matrix, `R` which maps the body frame orientations to the inertial frame orientations. Since the third column of the rotation matrix represents the
+mapping of the body frame orientations's z axis to the correcsponding x and y world frame axes, the actual thrust direction in the world frame is equal to R13 and R23.
 
 ```
 float b_x_act = R(0, 2); // R13
 float b_y_act = R(1, 2); // R23
 ```
 
-Since the commanded roll and pitch angles were not directly accessible, I solved for them using the relationship between the collective thrust, linear acceleration, and the body frame orientation of the quad (rads) for the x and y axis.
+Since the commanded roll and pitch angles were not directly accessible, I solved for them using the relationship between the collective thrust, linear acceleration, and the collective thrust direction (rads) for the x and y axis.
 
 ```
 x_dot_dot = Cc * b_x_cmd
 y_dot_dot = Cc * b_y_cmd
 ```
 
-After normalizing the collectiveThrustCmd by the quad's mass, I rearranged the above equations to solve for the commanded body frame orientations of the quadrotor in the x and y directions. And to ensure the tilt angles maintained
+After normalizing the collectiveThrustCmd by the quad's mass, I rearranged the above equations to solve for the commanded collective thrust directions in the x and y axis. And to ensure the angles maintained
 safe values, I constrained them so the quad couldn't rotate too far to attempt to achieve a greater acceleration.
 
 ```
@@ -76,7 +76,15 @@ float b_x_cmd = CONSTRAIN((accelCmd.x / z_accel_cmd_bf), -maxTiltAngle, maxTiltA
 float b_y_cmd = CONSTRAIN((accelCmd.y / z_accel_cmd_bf), -maxTiltAngle, maxTiltAngle);
 ```
 
+Solving for the commanded rates of change of the direction of thrust along the x and y axis, I used a P controller where the error terms were equal to the difference between the commanded and actual collective thrust directions in the x and y axis, and
+with a single gain term, `kpBank`.
 
+```
+float b_dot_x_cmd = kpBank * (b_x_cmd - b_x_act);
+float b_dot_y_cmd = kpBank * (b_y_cmd - b_y_act);
+```
+
+To output the commanded angular velocities for the quadrotor's body frame, `p` and `q`, 
 
 ### Scenario 3 (Position/velocity and yaw angle control):
 
