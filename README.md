@@ -158,7 +158,7 @@ yaw = fmodf(yaw, 2 * F_PI);
 float yawError = yawCmd - yaw;
 ```
 
-As an additional precautionary measure, I further constrained the yawError term to essentially find the shortest path to the commanded yaw value. To provide an example of an extreme case, if the commanded yaw value was at 6 rads and
+As an additional constraining measure, I further constrained the yawError term to essentially find the shortest path to the commanded yaw value. To provide an example of an extreme case, if the commanded yaw value was at 6 rads and
 the actual yaw value was at 0.5 rads, the `yawError` term would equal 5.5 rads. Without any constraining methods, the control effort would be much larger than necessary because there is a shorter path from 0.5 rads to 6 rads than traversing 5.5 rads.
 This method checks to see if the `yawError` term is greater than or less than `+ or - PI` respectively. If that case evaluates to true, then a shorter path is available, and in the case of the example, the quadrotor would be able to instead provide a commanded
 yaw of -0.78 rads.
