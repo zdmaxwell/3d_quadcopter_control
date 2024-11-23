@@ -204,9 +204,6 @@ float QuadControl::AltitudeControl(float posZCmd, float velZCmd, float posZ, flo
   // R33 = cos(theta) * cos(phi) which accounts for the pitch and roll angle about the y and x axis, respectively.
   float b_z = R(2, 2);
 
-  // constrain the commanded velocity to the specified rates. Here, ascending in NED is negative since positive z points down.
-  velZCmd = CONSTRAIN(velZCmd, -maxAscentRate, maxAscentRate);
-
   // calculate the position and velocity error terms for the P and D part of the controller
   float z_error = posZCmd - posZ;
   float z_dot_error = velZCmd - velZ;
@@ -214,8 +211,8 @@ float QuadControl::AltitudeControl(float posZCmd, float velZCmd, float posZ, flo
   // sum up the position error over time to reduce steady state error and implement the I term of the controller
   integratedAltitudeError += z_error * dt;
 
-  // PID controller to calculate the acceleration control effort
-  float u_bar_1 = kpPosZ * z_error + KiPosZ * integratedAltitudeError + kpVelZ * z_dot_error + velZ + accelZCmd;
+  // PID controller to calculate the acceleration control effort with feedforward control for the commanded velocity and acceleration
+  float u_bar_1 = kpPosZ * z_error + KiPosZ * integratedAltitudeError + kpVelZ * z_dot_error + velZCmd + accelZCmd;
 
   // calculate the commanded collective thrust based on the desired acceleration in the z direction
   // constrain the acceleration to safe values even if the position, velocity or integral errors are high

@@ -84,8 +84,8 @@ float b_dot_x_cmd = kpBank * (b_x_cmd - b_x_act);
 float b_dot_y_cmd = kpBank * (b_y_cmd - b_y_act);
 ```
 
-To output the commanded angular velocities for the quadrotor's body frame, `p_c` and `q_c`, I use the derived equation that relates the rate of change of the attitudes in the rotation matrix `R` (b_dot_x and b_dot_y) to the commanded body frame angular velocities, `p_c` and `q_c`.
-Solving for `p_c` and `q_c` takes the form below while ensuring the angular velocity in the z direction is 0:
+To output the commanded angular velocities for the quadrotor's body frame, `p_c` and `q_c`, I use the derived equation that relates the rate of change of the attitudes in the rotation matrix `R` (`b_dot_x` and `b_dot_y`) to the commanded body frame angular velocities, `p_c` and `q_c`.
+Solving for `p_c` and `q_c` takes the form below while ensuring the angular velocity in the z direction is zero:
 
 ```
 pqrCmd.x = (R(1, 0) * b_dot_x_cmd - R(0, 0) * b_dot_y_cmd) / R(2, 2);
@@ -98,6 +98,54 @@ Then I tuned `kpBank` to the point where the quadrotor maintained a level hover 
 ### Scenario 3 (Position/velocity and yaw angle control):
 
 ![Scenario 3](videos/scenario%204%20gif.gif)
+
+Since the `LateralPositionControl()` controller is a 2nd order system, I implemented a PD controller with feedforward control to output the commanded acceleration in the x and y direction.
+I also constrained the commanded velocity values to the quadrotor's actual range in the x and y direction and calculated the errors for the `P` and `D` terms below. Finally, I constrained the commanded
+x and y accelerations to the quadrotor's actual ranges.
+
+```
+V3F posError = posCmd - pos; // P term error
+V3F velError = velCmd - vel; // D term error
+
+velCmd.x = CONSTRAIN(velCmd.x, -maxSpeedXY, maxSpeedXY);
+velCmd.y = CONSTRAIN(velCmd.y, -maxSpeedXY, maxSpeedXY);
+
+accelCmd.x += kpPosXY * posError.x + kpVelXY * velError.x; // PD controller for x direction
+accelCmd.y += kpPosXY * posError.y + kpVelXY * velError.y; // PD controller for y direction
+
+accelCmd.x += CONSTRAIN(accelCmd.x, -maxAccelXY, maxAccelXY);
+accelCmd.y += CONSTRAIN(accelCmd.y, -maxAccelXY, maxAccelXY);
+```
+
+To implement the `AltitudeControl()` controller, I used a PID controller with feedforward control for both the commanded velocity and acceleration to command the z direction thrust. The benefit of the added
+feedforward terms is that the controller can more quickly meet the desired set points for commanded acceleration than a feedback control system which inherently needs to wait for the error terms to accumulate to produce
+a control output.
+
+I calculated the PID error terms as follows:
+
+```
+float z_error = posZCmd - posZ;
+float z_dot_error = velZCmd - velZ;
+integratedAltitudeError += z_error * dt;
+```
+
+The PID controller with feedforward control takes the following form as described above:
+
+```
+float u_bar_1 = kpPosZ * z_error + KiPosZ * integratedAltitudeError + kpVelZ * z_dot_error + velZCmd + accelZCmd;
+```
+
+Finally, to output the commanded collective thrust, I used the relationship between the vertical acceleration (z_dot_dot), acceleration due to gravity, and collective thrust.
+With the given coordinate system, the z acceleration corresponding to the collective thrust is equal to the below equation, where b_z is equal to the term in the rotation matrix `R` that determines z direction thrust in the inertial frame.
+For instance, if the quadrotor is level, then b_z will be 1 since the body z axis aligns with the inertial z axis. If the quadrotor is tilted about the z axis, then there is some component of roll, pitch, or both. Since R33 = cos(theta) \* cos(phi),
+the roll and pitch angles correspond directly to the value of R33 which will scale the thrust based on that tilt angle. The signs for the commanded thrust show that, if the quad is ascending (u_bar_1 < g), then the commanded thrust will need to be
+negative because the thrust vectors will be pointing upward in the NED (inertial) frame which corresponds to a negative value, since in the NED frame, down is positive.
+
+```
+float b_z = R(2, 2); R33
+float accelZ = (u_bar_1 - CONST_GRAVITY) / b_z;
+thrust = -CONSTRAIN(accelZ, -maxAccelZ, maxAccelZ) * mass;
+```
 
 ### Scenario 4 (Non-Idealities):
 
