@@ -136,16 +136,51 @@ float u_bar_1 = kpPosZ * z_error + KiPosZ * integratedAltitudeError + kpVelZ * z
 ```
 
 Finally, to output the commanded collective thrust, I used the relationship between the vertical acceleration (z_dot_dot), acceleration due to gravity, and collective thrust.
-With the given coordinate system, the z acceleration corresponding to the collective thrust is equal to the below equation, where b_z is equal to the term in the rotation matrix `R` that determines z direction thrust in the inertial frame.
+With the NED frame, the z acceleration corresponding to the collective thrust is equal to the below equation, where b_z is equal to the term in the rotation matrix `R` that determines z direction thrust in the inertial frame.
 For instance, if the quadrotor is level, then b_z will be 1 since the body z axis aligns with the inertial z axis. If the quadrotor is tilted about the z axis, then there is some component of roll, pitch, or both. Since R33 = cos(theta) \* cos(phi),
-the roll and pitch angles correspond directly to the value of R33 which will scale the thrust based on that tilt angle. The signs for the commanded thrust show that, if the quad is ascending (u_bar_1 < g), then the commanded thrust will need to be
-negative because the thrust vectors will be pointing upward in the NED (inertial) frame which corresponds to a negative value, since in the NED frame, down is positive.
+the roll and pitch angles correspond directly to the value of R33 which will scale the thrust based on that total tilt angle.
+The sign for the `thrust` equation ensures that the thrust and acceleration matches the NED frame convention where acceleration due to gravity is assumed to be positive (downward vector), and the acceleration control effort `u_bar_1` is assumed to be negative (upward vector).
+For instance, as the quadrotor is ascending to a desired altitude, the `AltitudeControl()` controller will be providing a larger and larger control effort `u_bar_1` to counteract gravity. Eventually, `u_bar_1` will be greater than the acceleration due to the gravity which translate to
+a negative thrust vector (pointing upwards in the NED frame). Lastly, I constrained the acceleration due to thrust by solving for the maxAccelZ parameter using `maxAscentRate / dt` which results in an acceleration [m / s^2].
 
 ```
 float b_z = R(2, 2); R33
-float accelZ = (u_bar_1 - CONST_GRAVITY) / b_z;
-thrust = -CONSTRAIN(accelZ, -maxAccelZ, maxAccelZ) * mass;
+thrust = CONSTRAIN(((CONST_GRAVITY - u_bar_1) / b_z), -maxAccelZ, maxAccelZ) * mass;
 ```
+
+Accounting for `YawControl()`, I developed a P controller since the controller was a 1st order system which needed to output a `yawRateCmd`.
+This P controller, however, required some additional constraining measures to ensure that larger, unnecessary control efforts were not outputted.
+To start, I constrained the `yawCmd` and `yaw` values to maintain a range of `[0, 2*PI]` since that would account for any possible yaw orientation that the quadrotor would achieve, and then I solved for the `yawError` term.
+
+```
+yawCmd = fmodf(yawCmd, 2 * F_PI);
+yaw = fmodf(yaw, 2 * F_PI);
+float yawError = yawCmd - yaw;
+```
+
+As an additional precautionary measure, I further constrained the yawError term to essentially find the shortest path to the commanded yaw value. To provide an example of an extreme case, if the commanded yaw value was at 6 rads and
+the actual yaw value was at 0.5 rads, the `yawError` term would equal 5.5 rads. Without any constraining methods, the control effort would be much larger than necessary because there is a shorter path from 0.5 rads to 6 rads than traversing 5.5 rads.
+This method checks to see if the `yawError` term is greater than or less than `+ or - PI` respectively. If that case evaluates to true, then a shorter path is available, and in the case of the example, the quadrotor would be able to instead provide a commanded
+yaw of -0.78 rads.
+
+```
+if (yawError > F_PI)
+{
+yawError -= 2 * F_PI;
+}
+if (yawError < -F_PI)
+{
+yawError += 2 * F_PI;
+}
+```
+
+Lastly, to output the `yawRatecmd`, I used a P controller of the following form:
+
+```
+yawRateCmd = kpYaw * yawError;
+```
+
+Tuning...
 
 ### Scenario 4 (Non-Idealities):
 

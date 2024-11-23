@@ -214,13 +214,11 @@ float QuadControl::AltitudeControl(float posZCmd, float velZCmd, float posZ, flo
   // PID controller to calculate the acceleration control effort with feedforward control for the commanded velocity and acceleration
   float u_bar_1 = kpPosZ * z_error + KiPosZ * integratedAltitudeError + kpVelZ * z_dot_error + velZCmd + accelZCmd;
 
-  // calculate the commanded collective thrust based on the desired acceleration in the z direction
-  // constrain the acceleration to safe values even if the position, velocity or integral errors are high
-  // use the constrained acceleration to calculate the commanded thrust by converting ascent and descent rates to acceleration
-  // thrust vector needs to act in negative direction (which is upward in NED frame)
+  // calculate the commanded collective thrust based on the acceleration control effort in the z direction
+  // constrain the mass normalized thrust (acceleration) to safe values even if the position, velocity or integral errors are high
+  // use the constrained acceleration to calculate the commanded thrust by introducing the mass component
   float maxAccelZ = maxAscentRate / dt;
-  float accelZ = (u_bar_1 - CONST_GRAVITY) / b_z;
-  thrust = -CONSTRAIN(accelZ, -maxAccelZ, maxAccelZ) * mass;
+  thrust = CONSTRAIN(((CONST_GRAVITY - u_bar_1) / b_z), -maxAccelZ, maxAccelZ) * mass;
 
   return thrust;
 }
