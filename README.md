@@ -8,7 +8,12 @@ Quadrotor Coordinate System
 
 ![Scenario 1](videos/scenario%201%20gif.gif)
 
-For the initial scenario, I updated the mass in `QuadControlParams.txt` so that the quad
+For the initial scenario, I slightly increased the mass in `QuadControlParams.txt` so that the quad could maintain a hover which essentially increases the thrust necessary to maintain a hover since
+in the initial scenario, the thrusts were set to the following:
+
+```
+QuadControlParams.Mass * 9.81 / 4
+```
 
 ### Scenario 2 (Body Rate and Roll/Pitch Control):
 
@@ -16,7 +21,7 @@ For the initial scenario, I updated the mass in `QuadControlParams.txt` so that 
 
 For the `GenerateMotorCommands()` method, I calculated the thrust components in the x, y, and z direction using the provided commanded collective thrust and the moments about the x, y, and z axis (roll, pitch, and yaw);
 Using the relationship between Moments and Force ( Force = Moment / L_arm ), I determined the forces (thrust) that corresponded to the moments in the x, y, and z direction. The x and y moments factored in the arm length
-of the quadrotor, where the arm length was equal to L / sqrt(2), since the x and y coordinate frame tied to the quadrotor is rotated at 45 degrees with respect to the quadrotor's arms. The moment in the z direction
+of the quadrotor, where the arm length was equal to `L / sqrt(2)`, since the x and y coordinate frame tied to the quadrotor is rotated at 45 degrees with respect to the quadrotor's arms. The moment in the z direction
 is dependent on the drag to thrust ratio, kappa, since the propellers inherently induce a moment about the z axis while spinning.
 
 ```
