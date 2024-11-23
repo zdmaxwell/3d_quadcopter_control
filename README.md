@@ -117,11 +117,7 @@ accelCmd.x += CONSTRAIN(accelCmd.x, -maxAccelXY, maxAccelXY);
 accelCmd.y += CONSTRAIN(accelCmd.y, -maxAccelXY, maxAccelXY);
 ```
 
-To implement the `AltitudeControl()` controller, I used a PID controller with feedforward control for both the commanded velocity and acceleration to command the z direction thrust. The benefit of the added
-feedforward terms is that the controller can more quickly meet the desired set points for commanded acceleration than a feedback control system which inherently needs to wait for the error terms to accumulate to produce
-a control output.
-
-I calculated the PID error terms as follows:
+To implement the `AltitudeControl()` controller, I used a PID controller to command the z direction thrust. I calculated the PID error terms as follows:
 
 ```
 float z_error = posZCmd - posZ;
@@ -129,10 +125,10 @@ float z_dot_error = velZCmd - velZ;
 integratedAltitudeError += z_error * dt;
 ```
 
-The PID controller with feedforward control takes the following form as described above:
+The full PID controller takes the following form as described above:
 
 ```
-float u_bar_1 = kpPosZ * z_error + KiPosZ * integratedAltitudeError + kpVelZ * z_dot_error + velZCmd + accelZCmd;
+float u_bar_1 = kpPosZ * z_error + KiPosZ * integratedAltitudeError + kpVelZ * z_dot_error;
 ```
 
 Finally, to output the commanded collective thrust, I used the relationship between the vertical acceleration (z_dot_dot), acceleration due to gravity, and collective thrust.
@@ -180,12 +176,19 @@ Lastly, to output the `yawRatecmd`, I used a P controller of the following form:
 yawRateCmd = kpYaw * yawError;
 ```
 
-Tuning...
+To tune these controllers, I increased the values of the gain terms `kpPosZ`, `kpPosXY`, `kpVelZ`, `kpVelXY`, and `kpYaw` until the tracking error in the simulation 3 scenario was reduced to the passing range.
+For my solution, I found that velocity gains (x, y, z) lower than the position gain terms (x, y, z) produced the smoothest control response.
 
 ### Scenario 4 (Non-Idealities):
 
 ![Scenario 4](videos/scenario%203%20gif.gif)
 
+To address the scenario 4, non-idealities and controller robustness, I already included the integral term in the `AltitudeControl()` controller to minimize the Z position steady state error in the system, so to achieve scenario 4, I tuned the position and velocity gains along with
+the `kiPosZ` gain term until the quads were able to reach the set point within the time requirement because, initially, I noticed that the quads were not moving fast enough to the set point, and specifically the red quad needed to minimize the `z` direction steady state error
+within the time constraint.
+
 ### Scenario 5 (Tracking trajectories):
 
 ![Scenario 5](videos/scenario%205%20gif.gif)
+
+For the final scenario, the yellow quad was able to fly the figure eight trajectory with the gain adjustments I made in the previous scenarios.

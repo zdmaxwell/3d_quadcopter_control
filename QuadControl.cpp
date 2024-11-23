@@ -158,7 +158,7 @@ V3F QuadControl::RollPitchControl(V3F accelCmd, Quaternion<float> attitude, floa
   float z_accel_cmd_bf = -collThrustCmd / mass;
 
   // calculate the commanded values of b_x_cmd and b_y_cmd (use the relationship x_dot_dot = Cc *  b_x_cmd and y_dot_dot = Cc * b_y_cmd)
-  // constrain the direction of thrust to safe angles
+  // constrain the direction of thrust to specified range of angles
   float b_x_cmd = CONSTRAIN((accelCmd.x / z_accel_cmd_bf), -maxTiltAngle, maxTiltAngle);
   float b_y_cmd = CONSTRAIN((accelCmd.y / z_accel_cmd_bf), -maxTiltAngle, maxTiltAngle);
 
@@ -211,11 +211,11 @@ float QuadControl::AltitudeControl(float posZCmd, float velZCmd, float posZ, flo
   // sum up the position error over time to reduce steady state error and implement the I term of the controller
   integratedAltitudeError += z_error * dt;
 
-  // PID controller to calculate the acceleration control effort with feedforward control for the commanded velocity and acceleration
-  float u_bar_1 = kpPosZ * z_error + KiPosZ * integratedAltitudeError + kpVelZ * z_dot_error + velZCmd + accelZCmd;
+  // PID controller to calculate the acceleration control effort
+  float u_bar_1 = kpPosZ * z_error + KiPosZ * integratedAltitudeError + kpVelZ * z_dot_error;
 
   // calculate the commanded collective thrust based on the acceleration control effort in the z direction
-  // constrain the mass normalized thrust (acceleration) to safe values even if the position, velocity or integral errors are high
+  // constrain the mass normalized thrust (acceleration) to correspond with the quad's actual range even if the position, velocity or integral errors are high
   // use the constrained acceleration to calculate the commanded thrust by introducing the mass component
   float maxAccelZ = maxAscentRate / dt;
   thrust = CONSTRAIN(((CONST_GRAVITY - u_bar_1) / b_z), -maxAccelZ, maxAccelZ) * mass;
@@ -252,7 +252,7 @@ V3F QuadControl::LateralPositionControl(V3F posCmd, V3F velCmd, V3F pos, V3F vel
   // to this variable
   V3F accelCmd = accelCmdFF;
 
-  // limit commanded velocities to the vehicle's actual range
+  // limit commanded velocities to the quad's actual ranges
   velCmd.x = CONSTRAIN(velCmd.x, -maxSpeedXY, maxSpeedXY);
   velCmd.y = CONSTRAIN(velCmd.y, -maxSpeedXY, maxSpeedXY);
 
