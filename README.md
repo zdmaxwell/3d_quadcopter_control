@@ -51,7 +51,7 @@ V3F bodyRateError = pqrCmd - pqr;
 momentCmd = momentOfInertia * kpPQR * bodyRateError;
 ```
 
-Lastly, to develop the `RollPitchControl()` controller, I implemented another P controller as it was also a 1st order system to control the commanded angular velocities `p` and `q` in the body frame.
+Lastly, to develop the `RollPitchControl()` controller, I implemented another P controller as it was also a 1st order system to control the commanded angular velocities `p_c` and `q_c` in the body frame.
 To obtain the actual body frame roll and pitch angles, I referenced the provided rotation matrix, `R` which maps the body frame orientations to the inertial frame orientations. Since the third column of the rotation matrix represents the
 mapping of the body frame orientations's z axis to the correcsponding x and y world frame axes, the actual thrust direction in the world frame is equal to R13 and R23.
 
@@ -84,7 +84,16 @@ float b_dot_x_cmd = kpBank * (b_x_cmd - b_x_act);
 float b_dot_y_cmd = kpBank * (b_y_cmd - b_y_act);
 ```
 
-To output the commanded angular velocities for the quadrotor's body frame, `p` and `q`, 
+To output the commanded angular velocities for the quadrotor's body frame, `p_c` and `q_c`, I use the derived equation that relates the rate of change of the attitudes in the rotation matrix `R` (b_dot_x and b_dot_y) to the commanded body frame angular velocities, `p_c` and `q_c`.
+Solving for `p_c` and `q_c` takes the form below while ensuring the angular velocity in the z direction is 0:
+
+```
+pqrCmd.x = (R(1, 0) * b_dot_x_cmd - R(0, 0) * b_dot_y_cmd) / R(2, 2);
+pqrCmd.y = (R(1, 1) * b_dot_x_cmd - R(0, 1) * b_dot_y_cmd) / R(2, 2);
+pqrCmd.z = 0.f;
+```
+
+Then I tuned `kpBank` to the point where the quadrotor maintained a level hover in scenario 2.
 
 ### Scenario 3 (Position/velocity and yaw angle control):
 
